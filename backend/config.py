@@ -20,9 +20,11 @@ class Config:
 
     _raw_db_url = os.environ.get('DATABASE_URL')
     if _raw_db_url:
-        # SQLAlchemy 1.4+ and 2.0+ require postgresql:// instead of legacy postgres://
+        # Normalize postgres:// and postgresql+psycopg2:// to standard postgresql:// (Psycopg 3 dialect in SQLAlchemy 2.0+)
         if _raw_db_url.startswith('postgres://'):
             _raw_db_url = _raw_db_url.replace('postgres://', 'postgresql://', 1)
+        elif _raw_db_url.startswith('postgresql+psycopg2://'):
+            _raw_db_url = _raw_db_url.replace('postgresql+psycopg2://', 'postgresql://', 1)
         SQLALCHEMY_DATABASE_URI = _raw_db_url
     elif IS_VERCEL:
         # On Vercel serverless functions, the root filesystem is read-only; use /tmp for fallback SQLite
