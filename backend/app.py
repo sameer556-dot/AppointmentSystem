@@ -651,36 +651,6 @@ def create_app(config_class=Config):
     # Initialize SQLAlchemy with app
     db.init_app(app)
 
-    # Initialize database tables and seed initial data if not already initialized.
-    # Checks table existence and records to avoid repeated slow seeding on every Gunicorn worker startup.
-    with app.app_context():
-        if DATABASE_DIR and app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite:'):
-            os.makedirs(DATABASE_DIR, exist_ok=True)
-        try:
-            from sqlalchemy import inspect
-            inspector = inspect(db.engine)
-            table_names = inspector.get_table_names()
-            if 'categories' not in table_names or 'providers' not in table_names:
-                db.create_all()
-                ensure_schema_compatibility()
-                seed_categories()
-                seed_providers()
-                seed_availabilities()
-            else:
-                if Category.query.first() is None:
-                    seed_categories()
-                    seed_providers()
-                    seed_availabilities()
-                else:
-                    ensure_schema_compatibility()
-        except Exception as e:
-            # Fallback for fresh database initialization
-            try:
-                db.create_all()
-                ensure_schema_compatibility()
-            except Exception:
-                pass
-
     # CLI command for manual or scripted database initialization
     @app.cli.command("init-db")
     def init_db_command():
@@ -690,6 +660,8 @@ def create_app(config_class=Config):
 
     # Root API index endpoint (for direct browser verification on Vercel)
     @app.route('/', methods=['GET'])
+    @app.route('/api', methods=['GET'])
+    @app.route('/api/', methods=['GET'])
     def root_index():
         return jsonify({
             "status": "success",
@@ -1381,6 +1353,8 @@ def create_app(config_class=Config):
 app = create_app()
 
 if __name__ == '__main__':
+    with app.app_context():
+        init_db(app)
     port = int(os.environ.get('PORT', 5000))
     debug_mode = app.config.get('DEBUG', False)
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
