@@ -673,11 +673,20 @@ def create_app(config_class=Config):
 
     # Health-check endpoint
     @app.route('/api/health', methods=['GET'])
+    @app.route('/health', methods=['GET'])
     def health_check():
         return jsonify({
             "status": "success",
             "message": "Appointment Booking API is running"
         }), 200
+
+    @app.errorhandler(404)
+    def handle_404(e):
+        return jsonify({
+            "status": "error",
+            "message": "Endpoint not found",
+            "path": request.path
+        }), 404
 
     # Service categories endpoint
     @app.route('/api/categories', methods=['GET'])
